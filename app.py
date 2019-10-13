@@ -109,7 +109,7 @@ def get_critic_reviews(page):
     # the_review
     the_review = tree.xpath('//div[contains(@class, "the_review")]/text()')
 
-    subtle = tree.xpath('//div[@class="small subtle"]')
+    subtle = tree.xpath('//div[@class="small subtle review-link"]')
     small = []
     for s in subtle:
         content_list = s.xpath('.//text()')
@@ -119,10 +119,10 @@ def get_critic_reviews(page):
             small.append(None)
 
     # small1
-    small1 = tree.xpath('//a[contains(@rel, "nofollow")]/@href')
+    small1 = tree.xpath('//a[contains(text(),"Full Review")]')
 
     # review_date
-    review_date = tree.xpath('//div[contains(@class, "review_date subtle small")]/text()')
+    review_date = tree.xpath('//div[contains(@class, "review-date subtle small")]/text()')
 
     # test to see that all the lists have the same number of items
     # for i in (titles,title_links, tumbnails, colsm13,the_review,small,small1,review_date):

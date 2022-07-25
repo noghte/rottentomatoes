@@ -4,43 +4,10 @@ import time
 import csv
 import os
 import sys
+import argparse
 
-# You can change these values
-allow_extract_critics = True
-allow_extract_audience = True
-page_limit = 52
+
 ctitic_review_prefix = "" #To prevent converting fractions to dates in Excel, you can add a prefix (for example, ctitic_review_prefix = "'")
-url_list = ["https://www.rottentomatoes.com/m/star_wars_the_last_jedi/reviews/",
-            "https://www.rottentomatoes.com/m/zootopia/reviews/", ]
-
-def main():
-    for url in url_list:
-        if allow_extract_critics:
-            critics_headers = {
-                'Host': 'www.rottentomatoes.com',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'max-age=0',
-                'TE': 'Trailers'
-            }
-            extract_critics(url, critics_headers, page_limit)
-        if allow_extract_audience:
-            audience_headers = {
-                'Host': 'www.rottentomatoes.com',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'max-age=0'
-            }
-            extract_audience(url, audience_headers, page_limit)
-
 
 def extract_critics(url, headers, page_limit):
     page_number = 0
@@ -96,9 +63,8 @@ def get_critic_reviews(page):
     titles = tree.xpath('//a[contains(@class, "unstyled bold articleLink")]/text()')
 
     # Title_link
-    title_links = tree.xpath('//a[contains(@class, "unstyled bold articleLink")]/@href')
-    for i, s in enumerate(title_links):
-        title_links[i] = "https://www.rottentomatoes.com" + s
+    tl = tree.xpath('//a[contains(@class, "unstyled bold articleLink")]/@href')
+    title_links = ["https://www.rottentomatoes.com" + t for t in tl]
 
     # Thumbnail
     tumbnails = tree.xpath('//img[contains(@class, "critic_thumb fullWidth")]/@src')
@@ -107,22 +73,24 @@ def get_critic_reviews(page):
     colsm13 = tree.xpath('//em[contains(@class, "subtle")]/text()')
 
     # the_review
-    the_review = tree.xpath('//div[contains(@class, "the_review")]/text()')
-
+    rv = tree.xpath('//div[contains(@class, "the_review")]/text()')
+    the_review = [r.strip() for r in rv]
     subtle = tree.xpath('//div[@class="small subtle review-link"]')
     small = []
     for s in subtle:
-        content_list = s.xpath('.//text()')
+        cl = s.xpath('.//text()')
+        content_list = [c.strip() for c in cl]
         if len(content_list) >= 3 and ':' in content_list[-1]:
             small.append(ctitic_review_prefix + content_list[-1].split(': ')[-1])
         else:
             small.append(None)
 
     # small1
-    small1 = tree.xpath('//a[contains(text(),"Full Review")]')
-
+    fr = tree.xpath('//a[contains(text(),"Full Review")]')
+    small1 = [s.body.text.strip() for s in fr]
     # review_date
-    review_date = tree.xpath('//div[contains(@class, "review-date subtle small")]/text()')
+    rd = tree.xpath('//div[contains(@class, "review-date subtle small")]/text()')
+    review_date = [r.strip() for r in rd]
 
     # test to see that all the lists have the same number of items
     # for i in (titles,title_links, tumbnails, colsm13,the_review,small,small1,review_date):
@@ -201,5 +169,42 @@ def get_audience_reviews(page):
 
 
 if __name__ == "__main__":
-    main()
+
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("-aec", "--allow_extract_critics", type=bool, default=True, help="Should the crawler extract critics reviews?")
+    arg_parser.add_argument("-aea", "--allow_extract_audience", type=bool, default=True, help="Should the crawler extract audience reviews?")
+    arg_parser.add_argument("-pl", "--page_limit", type=int, default=5, help="How many pages to crawl?")
+    arg_parser.add_argument("-uf", "--urls_file", type=str, default="./urls.txt", help="A text file containing a url in each line.")
+
+    args = vars(arg_parser.parse_args())
+   
+    with open(args["urls_file"], encoding="utf-8") as f:
+        url_list = [l.rstrip("\n") for l in f]
+    
+    for url in url_list:
+        if args['allow_extract_critics']:
+            critics_headers = {
+                'Host': 'www.rottentomatoes.com',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'max-age=0',
+                'TE': 'Trailers'
+            }
+            extract_critics(url, critics_headers, args['page_limit'])
+        if args['allow_extract_audience']:
+            audience_headers = {
+                'Host': 'www.rottentomatoes.com',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'max-age=0'
+            }
+            extract_audience(url, audience_headers, args['page_limit'])
 

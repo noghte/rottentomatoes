@@ -18,14 +18,14 @@ conda install lxml
 ```
 
 ### Config
-There are a few variables before the main() method (including URLs) that you can change:
+There are a few parameters that you can set:
 * allow_extract_critics
 * allow_extract_audience
 * page_limit
-* ctitic_review_prefix
-* url_list
+* urls_file
 
 
 ## Run
 
-`python app.py`
+- With default values: `python app.py`
+- With the `page_limit` parameter: `python app.py --page_limit 10`
